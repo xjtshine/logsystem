@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="org.woa.logsystem.persistence.LogMapper">
+
+  <select id="queryTotalDownloadTimes" resultType="LogBean">
+    SELECT COUNT(1) AS downLoadTimes
+     FROM SYSTEM_LOG T 
+     WHERE LOG_TYPE = 1 
+       AND LEFT(T.LOG_DATE,10) = LEFT(SYSDATE(),10)
+  </select>
+
+  <select id="queryAgentDownloadTimes" resultType="LogBean">
+    SELECT AGENT_ID AS agentId, COUNT(1) AS downLoadTimes
+      FROM SYSTEM_LOG T 
+     WHERE LOG_TYPE = 1 
+       AND LEFT(T.LOG_DATE,10) = LEFT(SYSDATE(), 10) 
+  GROUP BY AGENT_ID
+  </select>
+
+ <select id="queryClientAgentActivationTimes" resultType="LogBean">
+    SELECT T.AGENT_ID AS agentId, COUNT(1) AS activationTimes
+	  FROM (SELECT CLIENT_ID, AGENT_ID
+	          FROM SYSTEM_LOG
+	         WHERE LOG_TYPE = 2 AND
+	          LEFT(LOG_DATE, 10) = LEFT(SYSDATE(), 10)
+	         GROUP BY CLIENT_ID) T
+	 GROUP BY AGENT_ID
+  </select>
+
+	<select id="queryClientActivationTimes" resultType="LogBean">
+	    SELECT COUNT(1) AS activationTimes
+		  FROM (SELECT DISTINCT CLIENT_ID
+		          FROM SYSTEM_LOG
+		         WHERE LOG_TYPE = 2 
+		           AND LEFT(LOG_DATE, 10) = LEFT(SYSDATE(), 10)) T
+	  </select>
+
+	<select id="queryPaymentTotal" resultType="LogBean">
+	    SELECT SUM(T.TOTAL) as peymentTotal
+		  FROM SYSTEM_LOG T
+		 WHERE LOG_TYPE = 3 
+		   AND LEFT(LOG_DATE, 10) = LEFT(SYSDATE(), 10)
+	  </select>
+
+	<select id="queryAgentPaymentTotal" resultType="LogBean">
+	    SELECT T.AGENT_ID AS agentId, SUM(T.TOTAL) AS agentPaymentTotal
+		  FROM SYSTEM_LOG T
+		 WHERE LOG_TYPE = 3 
+		   AND LEFT(LOG_DATE, 10) = LEFT(SYSDATE(), 10)
+		 GROUP BY AGENT_ID
+	  </select>
+
+	<select id="queryPaymentRate" resultType="LogBean">
+	    SELECT PAY.CLIENT_COUNT / LOGIN.CLIENT_COUNT AS rate
+		  FROM (SELECT COUNT(CLIENT_ID) CLIENT_COUNT
+		          FROM SYSTEM_LOG
+		         WHERE LOG_TYPE = 3 
+		           AND LEFT(LOG_DATE, 10) = LEFT(SYSDATE(), 10)) PAY,
+		       (SELECT COUNT(CLIENT_ID) CLIENT_COUNT
+		          FROM SYSTEM_LOG
+		         WHERE LOG_TYPE = 4 
+		           AND LEFT(LOG_DATE, 10) = LEFT(SYSDATE(), 10)) LOGIN
+	  </select>
+
+  <insert id="saveLog" parameterType="LogBean">
+  	INSERT INTO SYSTEM_LOG
+	  (LOG_ID,
+	   LOG_TYPE,
+	   CLIENT_ID,
+	   AGENT_ID,
+	   USER_NAME,
+	   LOG_DATE,
+	   CURRENCY,
+	   TOTAL)
+	VALUES
+	  (#{logId},
+	   #{logType},
+	   #{clientId},
+	   #{agentId},
+	   #{username},
+	   #{timestamp},
+	   #{currency},
+	   #{total})
+  </insert>
+
+	<insert id="saveLogBatch" parameterType="java.util.List">  
+	    INSERT INTO SYSTEM_LOG
+		  (LOG_ID,
+		   LOG_TYPE,
+		   CLIENT_ID,
+		   AGENT_ID,
+		   USER_NAME,
+		   LOG_DATE,
+		   CURRENCY,
+		   TOTAL)
+		VALUES
+	    <foreach collection="list" item="item" index="index" separator="," >  
+	        (#{item.logId},#{item.logType},#{item.clientId},#{item.agentId},
+	        #{item.username},#{item.timestamp},#{item.currency},#{item.total} )  
+	    </foreach>  
+</insert>  
+
+</mapper>
